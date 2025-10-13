@@ -22,6 +22,7 @@ export interface SheetSize {
   width: number;
   height: number;
   name?: string;
+  quantity?: number;
 }
 
 export interface CalculationResults {

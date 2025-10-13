@@ -23,6 +23,7 @@ const STANDARD_SHEETS: SheetSize[] = [
 const SheetConfig = ({ onConfigured }: SheetConfigProps) => {
   const [customWidth, setCustomWidth] = useState("");
   const [customHeight, setCustomHeight] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [selectedStandard, setSelectedStandard] = useState<SheetSize | null>(null);
 
   const handleStandardSelect = (sheet: SheetSize) => {
@@ -32,22 +33,39 @@ const SheetConfig = ({ onConfigured }: SheetConfigProps) => {
   const handleCustomSubmit = () => {
     const width = parseFloat(customWidth);
     const height = parseFloat(customHeight);
+    const qty = parseInt(quantity);
 
     if (isNaN(width) || isNaN(height) || width <= 0 || height <= 0) {
       alert("Please enter valid positive numbers for width and height");
       return;
     }
 
+    if (isNaN(qty) || qty <= 0) {
+      alert("Please enter a valid positive number for quantity");
+      return;
+    }
+
     onConfigured({
       width,
       height,
+      quantity: qty,
       name: `Custom ${width} x ${height} mm`
     });
   };
 
   const handleStandardSubmit = () => {
+    const qty = parseInt(quantity);
+    
+    if (isNaN(qty) || qty <= 0) {
+      alert("Please enter a valid positive number for quantity");
+      return;
+    }
+
     if (selectedStandard) {
-      onConfigured(selectedStandard);
+      onConfigured({
+        ...selectedStandard,
+        quantity: qty
+      });
     }
   };
 
@@ -58,6 +76,19 @@ const SheetConfig = ({ onConfigured }: SheetConfigProps) => {
         <p className="text-sm text-muted-foreground">
           Select a standard sheet size or enter custom dimensions
         </p>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="quantity">Number of Pieces Needed</Label>
+        <Input
+          id="quantity"
+          type="number"
+          placeholder="Enter quantity"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          min="1"
+          step="1"
+        />
       </div>
 
       <Tabs defaultValue="standard">

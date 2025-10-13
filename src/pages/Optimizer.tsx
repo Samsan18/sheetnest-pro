@@ -29,9 +29,10 @@ const Optimizer = () => {
 
   const calculateResults = (dxf: DXFData, sheet: SheetSize) => {
     const sheetArea = sheet.width * sheet.height;
-    const totalPartArea = dxf.totalArea;
+    const quantity = sheet.quantity || 1;
+    const totalPartArea = dxf.totalArea * quantity;
     const usagePercentage = (totalPartArea / sheetArea) * 100;
-    const wastePercentage = 100 - usagePercentage;
+    const wastePercentage = usagePercentage > 100 ? 0 : 100 - usagePercentage;
     const sheetsRequired = Math.ceil(totalPartArea / sheetArea);
 
     setResults({

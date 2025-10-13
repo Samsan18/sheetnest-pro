@@ -36,25 +36,26 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
       doc.setFontSize(12);
       doc.text(`DXF File: ${dxfData.fileName}`, 20, 35);
       doc.text(`Sheet Size: ${sheetSize.name || `${sheetSize.width} x ${sheetSize.height} mm`}`, 20, 42);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 49);
+      doc.text(`Quantity: ${sheetSize.quantity || 1} pieces`, 20, 49);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 56);
       
       // Results
       doc.setFontSize(16);
-      doc.text("Calculation Results", 20, 65);
+      doc.text("Calculation Results", 20, 72);
       
       doc.setFontSize(12);
-      doc.text(`Sheet Area: ${results.sheetArea.toFixed(2)} mm²`, 20, 80);
-      doc.text(`Total Part Area: ${results.totalPartArea.toFixed(2)} mm²`, 20, 87);
-      doc.text(`Material Usage: ${results.usagePercentage.toFixed(2)}%`, 20, 94);
-      doc.text(`Material Waste: ${results.wastePercentage.toFixed(2)}%`, 20, 101);
-      doc.text(`Sheets Required: ${results.sheetsRequired}`, 20, 108);
+      doc.text(`Sheet Area: ${results.sheetArea.toFixed(2)} mm²`, 20, 87);
+      doc.text(`Total Part Area: ${results.totalPartArea.toFixed(2)} mm²`, 20, 94);
+      doc.text(`Material Usage: ${results.usagePercentage.toFixed(2)}%`, 20, 101);
+      doc.text(`Material Waste: ${results.wastePercentage.toFixed(2)}%`, 20, 108);
+      doc.text(`Sheets Required: ${results.sheetsRequired}`, 20, 115);
       
       // Entity details
       doc.setFontSize(16);
-      doc.text("Part Details", 20, 125);
+      doc.text("Part Details", 20, 132);
       
       doc.setFontSize(12);
-      doc.text(`Total Entities: ${dxfData.entities.length}`, 20, 140);
+      doc.text(`Total Entities: ${dxfData.entities.length}`, 20, 147);
       
       // Save
       doc.save(`sheetnest-report-${Date.now()}.pdf`);
@@ -149,6 +150,10 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Part Information</h3>
           <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Quantity Needed</span>
+              <span className="font-semibold">{sheetSize.quantity || 1} pieces</span>
+            </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Parts Area</span>
               <span className="font-semibold">{results.totalPartArea.toLocaleString()} mm²</span>
