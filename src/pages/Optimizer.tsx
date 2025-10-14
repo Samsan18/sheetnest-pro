@@ -30,11 +30,25 @@ const Optimizer = () => {
   const calculateResults = (dxf: DXFData, sheet: SheetSize) => {
     const sheetArea = sheet.width * sheet.height;
     const quantity = sheet.quantity || 1;
-    const totalPartArea = dxf.totalArea * quantity;
-    const usagePercentage = (totalPartArea / sheetArea) * 100;
-    const wastePercentage = usagePercentage > 100 ? 0 : 100 - usagePercentage;
+    
+    // Single part area
+    const singlePartArea = dxf.totalArea;
+    
+    // Total area needed for all parts
+    const totalPartArea = singlePartArea * quantity;
+    
+    // Calculate how many sheets are required
     const sheetsRequired = Math.ceil(totalPartArea / sheetArea);
-    const wasteArea = sheetsRequired * sheetArea - totalPartArea;
+    
+    // Total available area from all sheets
+    const totalAvailableArea = sheetsRequired * sheetArea;
+    
+    // Calculate waste area (total available - total used)
+    const wasteArea = totalAvailableArea - totalPartArea;
+    
+    // Calculate percentages based on total available area
+    const usagePercentage = (totalPartArea / totalAvailableArea) * 100;
+    const wastePercentage = (wasteArea / totalAvailableArea) * 100;
     
     const totalCost = sheet.costPerSheet ? sheet.costPerSheet * sheetsRequired : undefined;
     const costPerPart = totalCost ? totalCost / quantity : undefined;
