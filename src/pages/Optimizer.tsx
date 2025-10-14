@@ -31,7 +31,7 @@ const Optimizer = () => {
     const sheetArea = sheet.width * sheet.height;
     const quantity = sheet.quantity || 1;
     
-    // Single part area
+    // Single part area from DXF
     const singlePartArea = dxf.totalArea;
     
     // Total area needed for all parts
@@ -52,6 +52,24 @@ const Optimizer = () => {
     
     const totalCost = sheet.costPerSheet ? sheet.costPerSheet * sheetsRequired : undefined;
     const costPerPart = totalCost ? totalCost / quantity : undefined;
+
+    console.log('=== REAL CALCULATION DATA ===');
+    console.log('DXF File:', dxf.fileName);
+    console.log('Single Part Area (from DXF):', singlePartArea, 'mm²');
+    console.log('Quantity Requested:', quantity, 'pieces');
+    console.log('Total Part Area Needed:', totalPartArea, 'mm²');
+    console.log('Sheet Size:', sheet.width, 'x', sheet.height, 'mm');
+    console.log('Single Sheet Area:', sheetArea, 'mm²');
+    console.log('Sheets Required:', sheetsRequired);
+    console.log('Total Available Area:', totalAvailableArea, 'mm²');
+    console.log('Waste Area:', wasteArea, 'mm²');
+    console.log('Material Usage:', usagePercentage.toFixed(2), '%');
+    console.log('Material Waste:', wastePercentage.toFixed(2), '%');
+    if (totalCost) {
+      console.log('Total Cost:', totalCost);
+      console.log('Cost per Part:', costPerPart);
+    }
+    console.log('============================');
 
     setResults({
       sheetArea,

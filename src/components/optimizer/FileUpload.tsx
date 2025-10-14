@@ -81,7 +81,14 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
         bounds: { minX, maxX, minY, maxY }
       };
 
-      toast.success(`DXF file processed successfully! Found ${processedEntities.length} entities.`);
+      console.log('=== DXF FILE PROCESSED ===');
+      console.log('File Name:', file.name);
+      console.log('Entities Found:', processedEntities.length);
+      console.log('Total Area Calculated:', totalArea, 'mm²');
+      console.log('Bounds:', { minX, maxX, minY, maxY });
+      console.log('=========================');
+
+      toast.success(`DXF file processed successfully! Found ${processedEntities.length} entities with ${totalArea.toFixed(2)} mm² total area.`);
       onFileProcessed(dxfData);
     } catch (error) {
       console.error("Error processing DXF:", error);
