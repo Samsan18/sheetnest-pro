@@ -35,27 +35,37 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
       // File info
       doc.setFontSize(12);
       doc.text(`DXF File: ${dxfData.fileName}`, 20, 35);
-      doc.text(`Sheet Size: ${sheetSize.name || `${sheetSize.width} x ${sheetSize.height} mm`}`, 20, 42);
-      doc.text(`Quantity: ${sheetSize.quantity || 1} pieces`, 20, 49);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 56);
+      doc.text(`Material: ${sheetSize.material || 'Not specified'}`, 20, 42);
+      doc.text(`Sheet Size: ${sheetSize.name || `${sheetSize.width} x ${sheetSize.height} mm`}`, 20, 49);
+      if (sheetSize.thickness) {
+        doc.text(`Thickness: ${sheetSize.thickness} ${sheetSize.unit || 'mm'}`, 20, 56);
+      }
+      doc.text(`Quantity: ${sheetSize.quantity || 1} pieces`, 20, 63);
+      doc.text(`Date: ${new Date().toLocaleDateString()}`, 20, 70);
       
       // Results
       doc.setFontSize(16);
-      doc.text("Calculation Results", 20, 72);
+      doc.text("Calculation Results", 20, 86);
       
       doc.setFontSize(12);
-      doc.text(`Sheet Area: ${results.sheetArea.toFixed(2)} mm²`, 20, 87);
-      doc.text(`Total Part Area: ${results.totalPartArea.toFixed(2)} mm²`, 20, 94);
-      doc.text(`Material Usage: ${results.usagePercentage.toFixed(2)}%`, 20, 101);
-      doc.text(`Material Waste: ${results.wastePercentage.toFixed(2)}%`, 20, 108);
-      doc.text(`Sheets Required: ${results.sheetsRequired}`, 20, 115);
+      doc.text(`Sheet Area: ${results.sheetArea.toLocaleString()} mm²`, 20, 101);
+      doc.text(`Total Part Area: ${results.totalPartArea.toLocaleString()} mm²`, 20, 108);
+      doc.text(`Material Usage: ${results.usagePercentage.toFixed(2)}%`, 20, 115);
+      doc.text(`Material Waste: ${results.wastePercentage.toFixed(2)}%`, 20, 122);
+      doc.text(`Waste Area: ${results.wasteArea.toLocaleString()} mm²`, 20, 129);
+      doc.text(`Sheets Required: ${results.sheetsRequired}`, 20, 136);
+      
+      if (results.totalCost) {
+        doc.text(`Total Cost: $${results.totalCost.toFixed(2)}`, 20, 143);
+        doc.text(`Cost per Part: $${results.costPerPart?.toFixed(2)}`, 20, 150);
+      }
       
       // Entity details
       doc.setFontSize(16);
-      doc.text("Part Details", 20, 132);
+      doc.text("Part Details", 20, 166);
       
       doc.setFontSize(12);
-      doc.text(`Total Entities: ${dxfData.entities.length}`, 20, 147);
+      doc.text(`Total Entities: ${dxfData.entities.length}`, 20, 181);
       
       // Save
       doc.save(`sheetnest-report-${Date.now()}.pdf`);
@@ -86,7 +96,7 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
       </div>
 
       {/* Main Metrics */}
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-4 gap-6">
         <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm text-muted-foreground">Material Usage</span>
@@ -110,7 +120,7 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
             {results.wastePercentage.toFixed(1)}%
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {(results.sheetArea - results.totalPartArea).toFixed(2)} mm² wasted
+            {results.wasteArea.toLocaleString()} mm² wasted
           </p>
         </Card>
 
@@ -125,17 +135,41 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
             {sheetSize.name || `${sheetSize.width} x ${sheetSize.height} mm`}
           </p>
         </Card>
+
+        {results.totalCost && (
+          <Card className="p-6 bg-gradient-to-br from-success/10 to-success/5 border-success/20">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm text-muted-foreground">Total Cost</span>
+            </div>
+            <div className="text-4xl font-bold text-success">
+              ${results.totalCost.toFixed(2)}
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              ${results.costPerPart?.toFixed(2)} per part
+            </p>
+          </Card>
+        )}
       </div>
 
       {/* Detailed Information */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Sheet Information</h3>
+          <h3 className="text-lg font-semibold mb-4">Material Specifications</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Sheet Size</span>
-              <span className="font-semibold">{sheetSize.width} × {sheetSize.height} mm</span>
+              <span className="text-muted-foreground">Material Type</span>
+              <span className="font-semibold">{sheetSize.material || "Not specified"}</span>
             </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Sheet Size</span>
+              <span className="font-semibold">{sheetSize.width.toFixed(2)} × {sheetSize.height.toFixed(2)} mm</span>
+            </div>
+            {sheetSize.thickness && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Thickness</span>
+                <span className="font-semibold">{sheetSize.thickness} {sheetSize.unit || 'mm'}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Sheet Area</span>
               <span className="font-semibold">{results.sheetArea.toLocaleString()} mm²</span>
@@ -148,23 +182,63 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Part Information</h3>
+          <h3 className="text-lg font-semibold mb-4">Production Details</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Quantity Needed</span>
+              <span className="text-muted-foreground">Parts Needed</span>
               <span className="font-semibold">{sheetSize.quantity || 1} pieces</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Single Part Area</span>
+              <span className="font-semibold">{dxfData.totalArea.toLocaleString()} mm²</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Parts Area</span>
               <span className="font-semibold">{results.totalPartArea.toLocaleString()} mm²</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Number of Entities</span>
-              <span className="font-semibold">{dxfData.entities.length}</span>
+              <span className="text-muted-foreground">Sheets Required</span>
+              <span className="font-semibold text-primary">{results.sheetsRequired}</span>
             </div>
             <div className="flex justify-between">
+              <span className="text-muted-foreground">Entities Count</span>
+              <span className="font-semibold">{dxfData.entities.length}</span>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h3 className="text-lg font-semibold mb-4">Waste Analysis</h3>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Waste Area</span>
+              <span className="font-semibold">{results.wasteArea.toLocaleString()} mm²</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Waste Percentage</span>
+              <span className="font-semibold text-accent">{results.wastePercentage.toFixed(2)}%</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Usable Area</span>
+              <span className="font-semibold">{results.totalPartArea.toLocaleString()} mm²</span>
+            </div>
+            {results.totalCost && (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Cost</span>
+                  <span className="font-semibold text-success">${results.totalCost.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Cost per Part</span>
+                  <span className="font-semibold">${results.costPerPart?.toFixed(2)}</span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between">
               <span className="text-muted-foreground">DXF File</span>
-              <span className="font-semibold truncate max-w-[200px]">{dxfData.fileName}</span>
+              <span className="font-semibold truncate max-w-[150px]" title={dxfData.fileName}>
+                {dxfData.fileName}
+              </span>
             </div>
           </div>
         </Card>

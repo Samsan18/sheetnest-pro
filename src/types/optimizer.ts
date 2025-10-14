@@ -18,11 +18,29 @@ export interface DXFEntity {
   area?: number;
 }
 
+export type Unit = 'mm' | 'cm' | 'inch' | 'ft' | 'm';
+
+export type MaterialType = 
+  | 'Mild Steel' 
+  | 'Stainless Steel 304' 
+  | 'Stainless Steel 316' 
+  | 'Aluminum 5052' 
+  | 'Aluminum 6061' 
+  | 'Copper' 
+  | 'Brass'
+  | 'Galvanized Steel'
+  | 'Cold Rolled Steel'
+  | 'Hot Rolled Steel';
+
 export interface SheetSize {
   width: number;
   height: number;
   name?: string;
   quantity?: number;
+  unit?: Unit;
+  material?: MaterialType;
+  thickness?: number;
+  costPerSheet?: number;
 }
 
 export interface CalculationResults {
@@ -31,4 +49,7 @@ export interface CalculationResults {
   usagePercentage: number;
   wastePercentage: number;
   sheetsRequired: number;
+  totalCost?: number;
+  costPerPart?: number;
+  wasteArea: number;
 }

@@ -34,6 +34,10 @@ const Optimizer = () => {
     const usagePercentage = (totalPartArea / sheetArea) * 100;
     const wastePercentage = usagePercentage > 100 ? 0 : 100 - usagePercentage;
     const sheetsRequired = Math.ceil(totalPartArea / sheetArea);
+    const wasteArea = sheetsRequired * sheetArea - totalPartArea;
+    
+    const totalCost = sheet.costPerSheet ? sheet.costPerSheet * sheetsRequired : undefined;
+    const costPerPart = totalCost ? totalCost / quantity : undefined;
 
     setResults({
       sheetArea,
@@ -41,6 +45,9 @@ const Optimizer = () => {
       usagePercentage,
       wastePercentage,
       sheetsRequired,
+      wasteArea,
+      totalCost,
+      costPerPart,
     });
   };
 
