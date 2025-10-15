@@ -101,26 +101,47 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
       const file = acceptedFiles[0];
-      if (file.name.toLowerCase().endsWith('.dxf')) {
+      const fileName = file.name.toLowerCase();
+      
+      if (fileName.endsWith('.dxf')) {
         processDXFFile(file);
+      } else if (fileName.endsWith('.dwg')) {
+        toast.error("DWG format detected. Please convert to DXF format for processing.");
+      } else if (fileName.endsWith('.step') || fileName.endsWith('.stp')) {
+        toast.error("STEP format detected. Please convert to 2D DXF format for processing.");
+      } else if (fileName.endsWith('.iges') || fileName.endsWith('.igs')) {
+        toast.error("IGES format detected. Please convert to 2D DXF format for processing.");
+      } else if (fileName.endsWith('.sldprt')) {
+        toast.error("SLDPRT format detected. Please convert to 2D DXF format for processing.");
+      } else if (fileName.endsWith('.x_t')) {
+        toast.error("Parasolid format detected. Please convert to 2D DXF format for processing.");
+      } else if (fileName.endsWith('.pdf')) {
+        toast.error("PDF format detected. Please convert to DXF format for processing.");
       } else {
-        toast.error("Please upload a .dxf file");
+        toast.error("Unsupported file format. Please upload a DXF file.");
       }
     }
   }, [processDXFFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'application/dxf': ['.dxf'] },
+    accept: { 
+      'application/dxf': ['.dxf'],
+      'application/dwg': ['.dwg'],
+      'application/step': ['.step', '.stp'],
+      'application/iges': ['.iges', '.igs'],
+      'application/pdf': ['.pdf'],
+      'application/octet-stream': ['.sldprt', '.x_t']
+    },
     multiple: false
   });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Upload DXF File</h2>
+        <h2 className="text-3xl font-bold">Upload CAD File</h2>
         <p className="text-muted-foreground">
-          Upload your 2D DXF CAD file to begin optimization
+          Upload your CAD file to begin optimization
         </p>
       </div>
 
@@ -146,7 +167,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
               </div>
               <div>
                 <p className="text-lg font-medium mb-1">
-                  {isDragActive ? 'Drop DXF file here' : 'Drag & drop DXF file'}
+                  {isDragActive ? 'Drop CAD file here' : 'Drag & drop CAD file'}
                 </p>
                 <p className="text-sm text-muted-foreground">
                   or click to browse
@@ -154,7 +175,11 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-4 w-4" />
-                <span>Supports .dxf format</span>
+                <span>3D CAD: .step, .stp, .x_t, .iges, .igs, .sldprt</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                <span>2D Drawing: .dwg, .dxf, .pdf</span>
               </div>
             </>
           )}
@@ -167,10 +192,11 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
           <div className="space-y-2">
             <p className="font-semibold">File Requirements</p>
             <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• 2D DXF format (R12 or newer)</li>
+              <li>• Currently processing DXF format only (R12 or newer)</li>
+              <li>• Other formats (.dwg, .step, .iges, .pdf, etc.) accepted but require conversion to DXF</li>
               <li>• Closed polylines and circles supported</li>
               <li>• Maximum file size: 50MB</li>
-              <li>• Clean geometry recommended for accurate calculations</li>
+              <li>• Clean 2D geometry recommended for accurate calculations</li>
             </ul>
           </div>
         </div>
