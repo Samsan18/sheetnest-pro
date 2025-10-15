@@ -8,6 +8,8 @@ export interface DXFData {
     minY: number;
     maxY: number;
   };
+  is3D?: boolean;
+  modelData?: any; // 3D model data from STEP/IGES files
 }
 
 export interface DXFEntity {
