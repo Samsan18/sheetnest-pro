@@ -17,15 +17,26 @@ const Optimizer = () => {
 
   const handleFileProcessed = (data: DXFData) => {
     setDxfData(data);
-    setStep(2);
+    
+    // Auto-configure with default sheet size and calculate results immediately
+    const defaultSheet: SheetSize = {
+      width: 1525,
+      height: 3660,
+      quantity: 1,
+      costPerSheet: undefined
+    };
+    
+    setSheetSize(defaultSheet);
+    calculateResults(data, defaultSheet);
+    setStep(3);
   };
 
   const handleSheetConfigured = (sheet: SheetSize) => {
     setSheetSize(sheet);
     if (dxfData) {
       calculateResults(dxfData, sheet);
+      setStep(3);
     }
-    setStep(3);
   };
 
   const calculateResults = (dxf: DXFData, sheet: SheetSize) => {
@@ -130,10 +141,6 @@ const Optimizer = () => {
         
         {step === 2 && dxfData && (
           <div className="space-y-6">
-            <ValidationWarnings 
-              issues={dxfData.validationIssues} 
-              fileName={dxfData.fileName}
-            />
             <div className="grid lg:grid-cols-2 gap-8">
               <DXFViewer data={dxfData} />
               <SheetConfig onConfigured={handleSheetConfigured} />
@@ -142,12 +149,18 @@ const Optimizer = () => {
         )}
         
         {step === 3 && results && dxfData && sheetSize && (
-          <ResultsDisplay 
-            results={results} 
-            dxfData={dxfData} 
-            sheetSize={sheetSize}
-            onReset={handleReset}
-          />
+          <div className="space-y-6">
+            <ValidationWarnings 
+              issues={dxfData.validationIssues} 
+              fileName={dxfData.fileName}
+            />
+            <ResultsDisplay 
+              results={results} 
+              dxfData={dxfData} 
+              sheetSize={sheetSize}
+              onReset={handleReset}
+            />
+          </div>
         )}
       </main>
     </div>
