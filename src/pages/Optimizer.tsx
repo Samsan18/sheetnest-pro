@@ -6,7 +6,6 @@ import FileUpload from "@/components/optimizer/FileUpload";
 import DXFViewer from "@/components/optimizer/DXFViewer";
 import SheetConfig from "@/components/optimizer/SheetConfig";
 import ResultsDisplay from "@/components/optimizer/ResultsDisplay";
-import ValidationWarnings from "@/components/optimizer/ValidationWarnings";
 import { DXFData, SheetSize, CalculationResults } from "@/types/optimizer";
 
 const Optimizer = () => {
@@ -17,26 +16,15 @@ const Optimizer = () => {
 
   const handleFileProcessed = (data: DXFData) => {
     setDxfData(data);
-    
-    // Auto-configure with default sheet size and calculate results immediately
-    const defaultSheet: SheetSize = {
-      width: 1525,
-      height: 3660,
-      quantity: 1,
-      costPerSheet: undefined
-    };
-    
-    setSheetSize(defaultSheet);
-    calculateResults(data, defaultSheet);
-    setStep(3);
+    setStep(2);
   };
 
   const handleSheetConfigured = (sheet: SheetSize) => {
     setSheetSize(sheet);
     if (dxfData) {
       calculateResults(dxfData, sheet);
-      setStep(3);
     }
+    setStep(3);
   };
 
   const calculateResults = (dxf: DXFData, sheet: SheetSize) => {
@@ -140,27 +128,19 @@ const Optimizer = () => {
         {step === 1 && <FileUpload onFileProcessed={handleFileProcessed} />}
         
         {step === 2 && dxfData && (
-          <div className="space-y-6">
-            <div className="grid lg:grid-cols-2 gap-8">
-              <DXFViewer data={dxfData} />
-              <SheetConfig onConfigured={handleSheetConfigured} />
-            </div>
+          <div className="grid lg:grid-cols-2 gap-8">
+            <DXFViewer data={dxfData} />
+            <SheetConfig onConfigured={handleSheetConfigured} />
           </div>
         )}
         
         {step === 3 && results && dxfData && sheetSize && (
-          <div className="space-y-6">
-            <ValidationWarnings 
-              issues={dxfData.validationIssues} 
-              fileName={dxfData.fileName}
-            />
-            <ResultsDisplay 
-              results={results} 
-              dxfData={dxfData} 
-              sheetSize={sheetSize}
-              onReset={handleReset}
-            />
-          </div>
+          <ResultsDisplay 
+            results={results} 
+            dxfData={dxfData} 
+            sheetSize={sheetSize}
+            onReset={handleReset}
+          />
         )}
       </main>
     </div>
