@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { DXFData } from "@/types/optimizer";
 // @ts-ignore - dxf-parser types not available
 import DxfParser from "dxf-parser";
-import { parseSTEPFile, calculateModelArea, calculateModelBounds } from "@/utils/cadParser";
+import { parse3DFile, calculateModelArea, calculateModelBounds } from "@/utils/cadParser";
 
 interface FileUploadProps {
   onFileProcessed: (data: DXFData) => void;
@@ -15,14 +15,14 @@ interface FileUploadProps {
 const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
   const [processing, setProcessing] = useState(false);
 
-  const processSTEPFile = useCallback(async (file: File) => {
+  const process3DFile = useCallback(async (file: File) => {
     setProcessing(true);
     try {
       const arrayBuffer = await file.arrayBuffer();
-      const modelData = await parseSTEPFile(arrayBuffer);
+      const modelData = await parse3DFile(arrayBuffer, file.name);
       
       if (!modelData.success) {
-        throw new Error("Failed to parse STEP file");
+        throw new Error("Failed to parse 3D CAD file");
       }
 
       const totalArea = calculateModelArea(modelData);
@@ -53,7 +53,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       onFileProcessed(dxfData);
     } catch (error) {
       console.error("Error processing 3D model:", error);
-      toast.error("Failed to process 3D model file. Please ensure it's a valid STEP file.");
+      toast.error("Failed to process 3D CAD file. Please check the file format and try again.");
     } finally {
       setProcessing(false);
     }
@@ -150,23 +150,19 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       
       if (fileName.endsWith('.dxf')) {
         processDXFFile(file);
-      } else if (fileName.endsWith('.step') || fileName.endsWith('.stp')) {
-        processSTEPFile(file);
+      } else if (fileName.endsWith('.step') || fileName.endsWith('.stp') || 
+                 fileName.endsWith('.iges') || fileName.endsWith('.igs') ||
+                 fileName.endsWith('.x_t') || fileName.endsWith('.sldprt')) {
+        process3DFile(file);
       } else if (fileName.endsWith('.dwg')) {
         toast.error("DWG format detected. Please convert to DXF format for processing.");
-      } else if (fileName.endsWith('.iges') || fileName.endsWith('.igs')) {
-        toast.error("IGES format coming soon. Please use STEP or DXF format.");
-      } else if (fileName.endsWith('.sldprt')) {
-        toast.error("SLDPRT format detected. Please export as STEP from SolidWorks.");
-      } else if (fileName.endsWith('.x_t')) {
-        toast.error("Parasolid format detected. Please convert to STEP format.");
       } else if (fileName.endsWith('.pdf')) {
         toast.error("PDF format detected. Please convert to DXF format for processing.");
       } else {
-        toast.error("Unsupported file format. Please upload DXF or STEP files.");
+        toast.error("Unsupported file format. Please upload DXF or 3D CAD files.");
       }
     }
-  }, [processDXFFile, processSTEPFile]);
+  }, [processDXFFile, process3DFile]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -238,8 +234,8 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
             <p className="font-semibold">File Requirements</p>
             <ul className="text-sm text-muted-foreground space-y-1">
               <li>• <strong>2D Files:</strong> DXF format (R12 or newer) - polylines and circles</li>
-              <li>• <strong>3D Files:</strong> STEP format (.step, .stp) - fully supported</li>
-              <li>• Other formats require conversion to DXF or STEP</li>
+              <li>• <strong>3D Files:</strong> STEP, IGES, Parasolid, SolidWorks native files</li>
+              <li>• Supported: .step, .stp, .iges, .igs, .x_t, .sldprt</li>
               <li>• Maximum file size: 50MB</li>
               <li>• Clean geometry recommended for accurate calculations</li>
             </ul>

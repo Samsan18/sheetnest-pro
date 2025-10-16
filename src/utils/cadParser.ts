@@ -42,6 +42,43 @@ export const parseSTEPFile = async (fileContent: ArrayBuffer): Promise<ParsedCAD
   }
 };
 
+export const parseIGESFile = async (fileContent: ArrayBuffer): Promise<ParsedCADModel> => {
+  try {
+    const occt = await initializeOCCT();
+    const result = occt.ReadIgesFile(new Uint8Array(fileContent), null);
+    
+    if (!result.success) {
+      throw new Error("Failed to parse IGES file");
+    }
+
+    return {
+      meshes: result.meshes || [],
+      success: result.success,
+      faceCount: result.faceCount || 0,
+    };
+  } catch (error) {
+    console.error("Error parsing IGES file:", error);
+    throw error;
+  }
+};
+
+export const parse3DFile = async (fileContent: ArrayBuffer, fileName: string): Promise<ParsedCADModel> => {
+  const lowerFileName = fileName.toLowerCase();
+  
+  if (lowerFileName.endsWith('.step') || lowerFileName.endsWith('.stp')) {
+    return parseSTEPFile(fileContent);
+  } else if (lowerFileName.endsWith('.iges') || lowerFileName.endsWith('.igs')) {
+    return parseIGESFile(fileContent);
+  } else {
+    // Try STEP parser as fallback for other formats
+    try {
+      return await parseSTEPFile(fileContent);
+    } catch {
+      throw new Error(`Unsupported 3D CAD format: ${fileName}`);
+    }
+  }
+};
+
 export const calculateModelArea = (modelData: ParsedCADModel): number => {
   // Calculate approximate surface area from 3D model
   let totalArea = 0;
