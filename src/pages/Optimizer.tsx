@@ -6,6 +6,7 @@ import FileUpload from "@/components/optimizer/FileUpload";
 import DXFViewer from "@/components/optimizer/DXFViewer";
 import SheetConfig from "@/components/optimizer/SheetConfig";
 import ResultsDisplay from "@/components/optimizer/ResultsDisplay";
+import ValidationWarnings from "@/components/optimizer/ValidationWarnings";
 import { DXFData, SheetSize, CalculationResults } from "@/types/optimizer";
 
 const Optimizer = () => {
@@ -128,9 +129,15 @@ const Optimizer = () => {
         {step === 1 && <FileUpload onFileProcessed={handleFileProcessed} />}
         
         {step === 2 && dxfData && (
-          <div className="grid lg:grid-cols-2 gap-8">
-            <DXFViewer data={dxfData} />
-            <SheetConfig onConfigured={handleSheetConfigured} />
+          <div className="space-y-6">
+            <ValidationWarnings 
+              issues={dxfData.validationIssues} 
+              fileName={dxfData.fileName}
+            />
+            <div className="grid lg:grid-cols-2 gap-8">
+              <DXFViewer data={dxfData} />
+              <SheetConfig onConfigured={handleSheetConfigured} />
+            </div>
           </div>
         )}
         
