@@ -56,8 +56,8 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
       doc.text(`Sheets Required: ${results.sheetsRequired}`, 20, 136);
       
       if (results.totalCost) {
-        doc.text(`Total Cost: $${results.totalCost.toFixed(2)}`, 20, 143);
-        doc.text(`Cost per Part: $${results.costPerPart?.toFixed(2)}`, 20, 150);
+        doc.text(`Total Cost: ₹${results.totalCost.toFixed(2)}`, 20, 143);
+        doc.text(`Cost per Part: ₹${results.costPerPart?.toFixed(2)}`, 20, 150);
       }
       
       // Entity details
@@ -142,10 +142,10 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
               <span className="text-sm text-muted-foreground">Total Cost</span>
             </div>
             <div className="text-4xl font-bold text-success">
-              ${results.totalCost.toFixed(2)}
+              ₹{results.totalCost.toFixed(2)}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              ${results.costPerPart?.toFixed(2)} per part
+              ₹{results.costPerPart?.toFixed(2)} per part
             </p>
           </Card>
         )}
@@ -226,11 +226,11 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
               <>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Cost</span>
-                  <span className="font-semibold text-success">${results.totalCost.toFixed(2)}</span>
+                  <span className="font-semibold text-success">₹{results.totalCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Cost per Part</span>
-                  <span className="font-semibold">${results.costPerPart?.toFixed(2)}</span>
+                  <span className="font-semibold">₹{results.costPerPart?.toFixed(2)}</span>
                 </div>
               </>
             )}
