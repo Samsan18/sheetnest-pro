@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ZoomIn, ZoomOut, Maximize2 } from "lucide-react";
 import { DXFData } from "@/types/optimizer";
+import Model3DViewer from "./Model3DViewer";
 
 interface DXFViewerProps {
   data: DXFData;
@@ -12,6 +13,11 @@ const DXFViewer = ({ data }: DXFViewerProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  // If it's a 3D model, render the 3D viewer instead
+  if (data.is3D && data.modelData) {
+    return <Model3DViewer modelData={data.modelData} fileName={data.fileName} />;
+  }
 
   useEffect(() => {
     if (!canvasRef.current) return;

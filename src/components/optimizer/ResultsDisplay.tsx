@@ -56,8 +56,8 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
       doc.text(`Sheets Required: ${results.sheetsRequired}`, 20, 136);
       
       if (results.totalCost) {
-        doc.text(`Total Cost: ₹${results.totalCost.toFixed(2)}`, 20, 143);
-        doc.text(`Cost per Part: ₹${results.costPerPart?.toFixed(2)}`, 20, 150);
+        doc.text(`Total Cost: $${results.totalCost.toFixed(2)}`, 20, 143);
+        doc.text(`Cost per Part: $${results.costPerPart?.toFixed(2)}`, 20, 150);
       }
       
       // Entity details
@@ -142,14 +142,87 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
               <span className="text-sm text-muted-foreground">Total Cost</span>
             </div>
             <div className="text-4xl font-bold text-success">
-              ₹{results.totalCost.toFixed(2)}
+              ${results.totalCost.toFixed(2)}
             </div>
             <p className="text-sm text-muted-foreground mt-1">
-              ₹{results.costPerPart?.toFixed(2)} per part
+              ${results.costPerPart?.toFixed(2)} per part
             </p>
           </Card>
         )}
       </div>
+
+      {/* Production Breakdown */}
+      <Card className="p-6 bg-gradient-to-br from-primary/5 to-accent/5 border-primary/20">
+        <h3 className="text-xl font-bold mb-4 text-primary">Production Breakdown</h3>
+        <div className="space-y-4">
+          <div className="p-4 bg-background rounded-lg border">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Single Part Size (from DXF)</p>
+                <p className="text-2xl font-bold">{dxfData.totalArea.toLocaleString()} mm²</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Parts to Produce</p>
+                <p className="text-2xl font-bold text-primary">{sheetSize.quantity || 1} pieces</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-center py-2">
+            <div className="text-4xl text-muted-foreground">×</div>
+          </div>
+          
+          <div className="p-4 bg-background rounded-lg border">
+            <p className="text-sm text-muted-foreground mb-1">Total Material Needed for All Parts</p>
+            <p className="text-3xl font-bold text-primary">{results.totalPartArea.toLocaleString()} mm²</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              ({dxfData.totalArea.toLocaleString()} mm² × {sheetSize.quantity || 1} pieces)
+            </p>
+          </div>
+          
+          <div className="flex items-center justify-center py-2">
+            <div className="text-4xl text-muted-foreground">÷</div>
+          </div>
+          
+          <div className="p-4 bg-background rounded-lg border">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Sheet Size</p>
+                <p className="text-xl font-bold">{sheetSize.width} × {sheetSize.height} mm</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Area per Sheet</p>
+                <p className="text-xl font-bold">{results.sheetArea.toLocaleString()} mm²</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-center py-2">
+            <div className="text-4xl text-success">=</div>
+          </div>
+          
+          <div className="p-6 bg-success/10 rounded-lg border-2 border-success">
+            <p className="text-sm text-muted-foreground mb-2">You Need</p>
+            <p className="text-5xl font-bold text-success mb-2">{results.sheetsRequired} Sheets</p>
+            <p className="text-sm text-muted-foreground">
+              to produce {sheetSize.quantity || 1} {(sheetSize.quantity || 1) === 1 ? 'part' : 'parts'}
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4 mt-4">
+            <div className="p-4 bg-primary/10 rounded-lg border border-primary/20">
+              <p className="text-xs text-muted-foreground mb-1">Material Used</p>
+              <p className="text-2xl font-bold text-primary">{results.usagePercentage.toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground mt-1">{results.totalPartArea.toLocaleString()} mm²</p>
+            </div>
+            <div className="p-4 bg-accent/10 rounded-lg border border-accent/20">
+              <p className="text-xs text-muted-foreground mb-1">Material Wasted</p>
+              <p className="text-2xl font-bold text-accent">{results.wastePercentage.toFixed(1)}%</p>
+              <p className="text-xs text-muted-foreground mt-1">{results.wasteArea.toLocaleString()} mm²</p>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       {/* Detailed Information */}
       <div className="grid md:grid-cols-3 gap-6">
@@ -201,14 +274,14 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
               <span className="font-semibold text-primary">{results.sheetsRequired}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Entities Count</span>
-              <span className="font-semibold">{dxfData.entities.length}</span>
+              <span className="text-muted-foreground">Total Sheet Area</span>
+              <span className="font-semibold">{(results.sheetArea * results.sheetsRequired).toLocaleString()} mm²</span>
             </div>
           </div>
         </Card>
 
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Waste Analysis</h3>
+          <h3 className="text-lg font-semibold mb-4">Cost & Waste Analysis</h3>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Waste Area</span>
@@ -219,18 +292,18 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
               <span className="font-semibold text-accent">{results.wastePercentage.toFixed(2)}%</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Usable Area</span>
-              <span className="font-semibold">{results.totalPartArea.toLocaleString()} mm²</span>
+              <span className="text-muted-foreground">Usage Efficiency</span>
+              <span className="font-semibold text-primary">{results.usagePercentage.toFixed(2)}%</span>
             </div>
             {results.totalCost && (
               <>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Total Cost</span>
-                  <span className="font-semibold text-success">₹{results.totalCost.toFixed(2)}</span>
+                  <span className="font-semibold text-success">${results.totalCost.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Cost per Part</span>
-                  <span className="font-semibold">₹{results.costPerPart?.toFixed(2)}</span>
+                  <span className="font-semibold">${results.costPerPart?.toFixed(2)}</span>
                 </div>
               </>
             )}
