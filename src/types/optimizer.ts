@@ -10,6 +10,7 @@ export interface DXFData {
   };
   is3D?: boolean;
   modelData?: any; // 3D model data from STEP/IGES files
+  validationIssues?: string[]; // Real-time validation feedback
 }
 
 export interface DXFEntity {

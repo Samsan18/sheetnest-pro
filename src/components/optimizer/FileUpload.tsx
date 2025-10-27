@@ -28,6 +28,21 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       const totalArea = calculateModelArea(modelData);
       const bounds = calculateModelBounds(modelData);
 
+      // Validate 3D model data
+      const validationIssues: string[] = [];
+      
+      if (modelData.faceCount === 0) {
+        validationIssues.push("No faces detected in 3D model");
+      }
+      
+      if (totalArea === 0) {
+        validationIssues.push("Surface area calculated as 0 mm² - file may be empty or have invalid geometry");
+      }
+      
+      if (modelData.meshes.length === 0) {
+        validationIssues.push("No mesh data found in 3D model");
+      }
+
       const dxfData: DXFData = {
         fileName: file.name,
         entities: [],
@@ -40,6 +55,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
         },
         is3D: true,
         modelData,
+        validationIssues: validationIssues.length > 0 ? validationIssues : undefined,
       };
 
       console.log('=== 3D MODEL PROCESSED ===');
@@ -47,9 +63,15 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       console.log('Face Count:', modelData.faceCount);
       console.log('Total Surface Area:', totalArea.toFixed(2), 'mm²');
       console.log('Bounds:', bounds);
+      console.log('Validation Issues:', validationIssues);
       console.log('=========================');
 
-      toast.success(`3D model processed! Surface area: ${totalArea.toFixed(2)} mm²`);
+      if (validationIssues.length > 0) {
+        toast.error(`File processed with issues: ${validationIssues.join(', ')}`);
+      } else {
+        toast.success(`3D model processed! Surface area: ${totalArea.toFixed(2)} mm²`);
+      }
+      
       onFileProcessed(dxfData);
     } catch (error) {
       console.error("Error processing 3D model:", error);
@@ -119,11 +141,34 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
         return processed;
       });
 
+      // Validate DXF data
+      const validationIssues: string[] = [];
+      
+      if (processedEntities.length === 0) {
+        validationIssues.push("No entities found in DXF file");
+      }
+      
+      if (totalArea === 0) {
+        validationIssues.push("Total area calculated as 0 mm² - file may contain only lines or invalid closed shapes");
+        validationIssues.push("Ensure your DXF contains closed polylines or circles for area calculation");
+      }
+      
+      if (minX === Infinity || maxX === -Infinity) {
+        validationIssues.push("Invalid bounds detected - file may be corrupted");
+      }
+      
+      const hasAreaEntities = processedEntities.some(e => e.area && e.area > 0);
+      if (processedEntities.length > 0 && !hasAreaEntities) {
+        validationIssues.push("No entities with calculable area found (lines only)");
+        validationIssues.push("Add closed polylines or circles to calculate material usage");
+      }
+
       const dxfData: DXFData = {
         fileName: file.name,
         entities: processedEntities,
         totalArea,
-        bounds: { minX, maxX, minY, maxY }
+        bounds: { minX, maxX, minY, maxY },
+        validationIssues: validationIssues.length > 0 ? validationIssues : undefined,
       };
 
       console.log('=== DXF FILE PROCESSED ===');
@@ -131,9 +176,15 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       console.log('Entities Found:', processedEntities.length);
       console.log('Total Area Calculated:', totalArea, 'mm²');
       console.log('Bounds:', { minX, maxX, minY, maxY });
+      console.log('Validation Issues:', validationIssues);
       console.log('=========================');
 
-      toast.success(`DXF file processed successfully! Found ${processedEntities.length} entities with ${totalArea.toFixed(2)} mm² total area.`);
+      if (validationIssues.length > 0) {
+        toast.error(`File processed with issues - check validation warnings`);
+      } else {
+        toast.success(`DXF file processed successfully! Found ${processedEntities.length} entities with ${totalArea.toFixed(2)} mm² total area.`);
+      }
+      
       onFileProcessed(dxfData);
     } catch (error) {
       console.error("Error processing DXF:", error);
