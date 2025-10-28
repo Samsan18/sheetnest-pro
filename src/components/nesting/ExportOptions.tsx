@@ -14,20 +14,41 @@ interface ExportOptionsProps {
 
 const ExportOptions = ({ result, sheetWidth, sheetHeight, kerfWidth }: ExportOptionsProps) => {
   const exportDXF = () => {
-    // Generate DXF file with nested layout
+    // Generate DXF file with nested layout - all parts with accurate positioning
     let dxfContent = "0\nSECTION\n2\nHEADER\n";
     dxfContent += "9\n$ACADVER\n1\nAC1015\n";
+    dxfContent += "9\n$INSUNITS\n70\n4\n"; // Millimeters
     dxfContent += "0\nENDSEC\n";
     dxfContent += "0\nSECTION\n2\nENTITIES\n";
 
+    // Sheet boundary rectangle for reference
+    dxfContent += "0\nPOLYLINE\n8\nSHEET_BOUNDARY\n62\n7\n66\n1\n70\n1\n";
+    dxfContent += `0\nVERTEX\n8\nSHEET_BOUNDARY\n10\n0\n20\n0\n`;
+    dxfContent += `0\nVERTEX\n8\nSHEET_BOUNDARY\n10\n${sheetWidth}\n20\n0\n`;
+    dxfContent += `0\nVERTEX\n8\nSHEET_BOUNDARY\n10\n${sheetWidth}\n20\n${sheetHeight}\n`;
+    dxfContent += `0\nVERTEX\n8\nSHEET_BOUNDARY\n10\n0\n20\n${sheetHeight}\n`;
+    dxfContent += "0\nSEQEND\n";
+
     result.sheets.forEach((sheet, sheetIdx) => {
       sheet.forEach(part => {
-        // Draw polyline for each part
-        dxfContent += "0\nPOLYLINE\n8\n0\n66\n1\n70\n1\n";
+        // Apply rotation and translation to each point
+        const transformedPoints = part.points.map(point => {
+          const rotated = rotatePoint(point, part.rotation);
+          return {
+            x: part.x + rotated.x + kerfWidth,
+            y: part.y + rotated.y + kerfWidth,
+          };
+        });
         
-        part.points.forEach(point => {
-          const rotatedPoint = rotatePoint(point, part.rotation);
-          dxfContent += `0\nVERTEX\n8\n0\n10\n${part.x + rotatedPoint.x}\n20\n${part.y + rotatedPoint.y}\n`;
+        // Write polyline for the part with proper layer and attributes
+        dxfContent += "0\nPOLYLINE\n";
+        dxfContent += `8\n${part.id}\n`; // Layer name from part ID
+        dxfContent += "62\n1\n"; // Color index
+        dxfContent += "66\n1\n"; // Vertices follow flag
+        dxfContent += "70\n1\n"; // Closed polyline
+        
+        transformedPoints.forEach(point => {
+          dxfContent += `0\nVERTEX\n8\n${part.id}\n10\n${point.x.toFixed(6)}\n20\n${point.y.toFixed(6)}\n`;
         });
         
         dxfContent += "0\nSEQEND\n";
@@ -37,7 +58,7 @@ const ExportOptions = ({ result, sheetWidth, sheetHeight, kerfWidth }: ExportOpt
     dxfContent += "0\nENDSEC\n0\nEOF\n";
 
     downloadFile(dxfContent, "nested_layout.dxf", "application/dxf");
-    toast.success("DXF file exported successfully");
+    toast.success(`DXF file exported with ${result.totalPartsPlaced} parts across ${result.sheetsRequired} sheet(s)`);
   };
 
   const exportSVG = () => {

@@ -1,6 +1,15 @@
+export interface DXFPart {
+  id: string;
+  points: { x: number; y: number }[];
+  area: number;
+  fileName: string;
+  entityType: string;
+}
+
 export interface DXFData {
   fileName: string;
   entities: DXFEntity[];
+  parts: DXFPart[]; // Individual closed shapes extracted from this file
   totalArea: number;
   bounds: {
     minX: number;

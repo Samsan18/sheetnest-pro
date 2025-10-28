@@ -5,90 +5,80 @@ import { Link } from "react-router-dom";
 import FileUpload from "@/components/optimizer/FileUpload";
 import DXFViewer from "@/components/optimizer/DXFViewer";
 import SheetConfig from "@/components/optimizer/SheetConfig";
-import ResultsDisplay from "@/components/optimizer/ResultsDisplay";
 import ValidationWarnings from "@/components/optimizer/ValidationWarnings";
-import { DXFData, SheetSize, CalculationResults } from "@/types/optimizer";
+import { DXFData, SheetSize, CalculationResults, DXFPart } from "@/types/optimizer";
+import InteractiveCanvas from "@/components/nesting/InteractiveCanvas";
+import ExportOptions from "@/components/nesting/ExportOptions";
+import { nestParts, NestingPart, NestingResult } from "@/utils/nestingAlgorithm";
+import { Card } from "@/components/ui/card";
 
 const Optimizer = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [dxfData, setDxfData] = useState<DXFData | null>(null);
+  const [dxfFiles, setDxfFiles] = useState<DXFData[]>([]);
+  const [allParts, setAllParts] = useState<DXFPart[]>([]);
   const [sheetSize, setSheetSize] = useState<SheetSize | null>(null);
-  const [results, setResults] = useState<CalculationResults | null>(null);
+  const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
 
-  const handleFileProcessed = (data: DXFData) => {
-    setDxfData(data);
+  const handleFilesProcessed = (data: DXFData[]) => {
+    setDxfFiles(data);
+    // Extract all parts from all files
+    const parts: DXFPart[] = [];
+    data.forEach(file => {
+      parts.push(...file.parts);
+    });
+    setAllParts(parts);
     setStep(2);
   };
 
   const handleSheetConfigured = (sheet: SheetSize) => {
     setSheetSize(sheet);
-    if (dxfData) {
-      calculateResults(dxfData, sheet);
+    if (allParts.length > 0) {
+      performNesting(allParts, sheet);
     }
     setStep(3);
   };
 
-  const calculateResults = (dxf: DXFData, sheet: SheetSize) => {
-    const sheetArea = sheet.width * sheet.height;
-    const quantity = sheet.quantity || 1;
-    
-    // Single part area from DXF
-    const singlePartArea = dxf.totalArea;
-    
-    // Total area needed for all parts
-    const totalPartArea = singlePartArea * quantity;
-    
-    // Calculate how many sheets are required
-    const sheetsRequired = Math.ceil(totalPartArea / sheetArea);
-    
-    // Total available area from all sheets
-    const totalAvailableArea = sheetsRequired * sheetArea;
-    
-    // Calculate waste area (total available - total used)
-    const wasteArea = totalAvailableArea - totalPartArea;
-    
-    // Calculate percentages based on total available area
-    const usagePercentage = (totalPartArea / totalAvailableArea) * 100;
-    const wastePercentage = (wasteArea / totalAvailableArea) * 100;
-    
-    const totalCost = sheet.costPerSheet ? sheet.costPerSheet * sheetsRequired : undefined;
-    const costPerPart = totalCost ? totalCost / quantity : undefined;
+  const performNesting = (parts: DXFPart[], sheet: SheetSize) => {
+    // Convert DXFParts to NestingParts
+    const nestingParts: NestingPart[] = parts.map(part => ({
+      id: part.id,
+      points: part.points,
+      area: part.area,
+      quantity: 1, // Each extracted part is already individual
+      rotation: 0,
+      rotationLimit: 360, // Allow free rotation for optimal nesting
+    }));
 
-    console.log('=== REAL CALCULATION DATA ===');
-    console.log('DXF File:', dxf.fileName);
-    console.log('Single Part Area (from DXF):', singlePartArea, 'mm²');
-    console.log('Quantity Requested:', quantity, 'pieces');
-    console.log('Total Part Area Needed:', totalPartArea, 'mm²');
-    console.log('Sheet Size:', sheet.width, 'x', sheet.height, 'mm');
-    console.log('Single Sheet Area:', sheetArea, 'mm²');
-    console.log('Sheets Required:', sheetsRequired);
-    console.log('Total Available Area:', totalAvailableArea, 'mm²');
-    console.log('Waste Area:', wasteArea, 'mm²');
-    console.log('Material Usage:', usagePercentage.toFixed(2), '%');
-    console.log('Material Waste:', wastePercentage.toFixed(2), '%');
-    if (totalCost) {
-      console.log('Total Cost:', totalCost);
-      console.log('Cost per Part:', costPerPart);
-    }
-    console.log('============================');
-
-    setResults({
-      sheetArea,
-      totalPartArea,
-      usagePercentage,
-      wastePercentage,
-      sheetsRequired,
-      wasteArea,
-      totalCost,
-      costPerPart,
+    // Perform nesting
+    const result = nestParts(nestingParts, {
+      width: sheet.width,
+      height: sheet.height,
+    }, {
+      kerfWidth: 0.5, // Default kerf width in mm
+      globalClearance: 2, // 2mm clearance between parts
+      rotationStep: 15, // Test rotations every 15 degrees
+      commonLineCutting: false,
+      maxIterations: 1000,
     });
+
+    console.log('=== NESTING RESULTS ===');
+    console.log('Total Files:', dxfFiles.length);
+    console.log('Total Parts:', parts.length);
+    console.log('Sheets Required:', result.sheetsRequired);
+    console.log('Parts Placed:', result.totalPartsPlaced);
+    console.log('Usage:', result.usagePercentage.toFixed(2), '%');
+    console.log('Waste:', result.wastePercentage.toFixed(2), '%');
+    console.log('======================');
+
+    setNestingResult(result);
   };
 
   const handleReset = () => {
     setStep(1);
-    setDxfData(null);
+    setDxfFiles([]);
+    setAllParts([]);
     setSheetSize(null);
-    setResults(null);
+    setNestingResult(null);
   };
 
   return (
@@ -126,28 +116,89 @@ const Optimizer = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {step === 1 && <FileUpload onFileProcessed={handleFileProcessed} />}
+        {step === 1 && <FileUpload onFilesProcessed={handleFilesProcessed} />}
         
-        {step === 2 && dxfData && (
+        {step === 2 && dxfFiles.length > 0 && (
           <div className="space-y-6">
-            <ValidationWarnings 
-              issues={dxfData.validationIssues} 
-              fileName={dxfData.fileName}
-            />
+            {dxfFiles.map((file, idx) => (
+              <ValidationWarnings 
+                key={idx}
+                issues={file.validationIssues} 
+                fileName={file.fileName}
+              />
+            ))}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold mb-4">Files Summary</h3>
+              <p className="text-muted-foreground mb-2">
+                {dxfFiles.length} file{dxfFiles.length > 1 ? 's' : ''} uploaded with {allParts.length} total parts
+              </p>
+              <ul className="space-y-1 text-sm">
+                {dxfFiles.map((file, idx) => (
+                  <li key={idx}>
+                    • {file.fileName}: {file.parts.length} part{file.parts.length !== 1 ? 's' : ''}
+                  </li>
+                ))}
+              </ul>
+            </Card>
             <div className="grid lg:grid-cols-2 gap-8">
-              <DXFViewer data={dxfData} />
+              <DXFViewer data={dxfFiles[0]} />
               <SheetConfig onConfigured={handleSheetConfigured} />
             </div>
           </div>
         )}
         
-        {step === 3 && results && dxfData && sheetSize && (
-          <ResultsDisplay 
-            results={results} 
-            dxfData={dxfData} 
-            sheetSize={sheetSize}
-            onReset={handleReset}
-          />
+        {step === 3 && nestingResult && sheetSize && (
+          <div className="space-y-6">
+            <Card className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Nesting Results</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Sheets Required</p>
+                  <p className="text-2xl font-bold">{nestingResult.sheetsRequired}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Parts Placed</p>
+                  <p className="text-2xl font-bold">{nestingResult.totalPartsPlaced}/{allParts.length}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Material Usage</p>
+                  <p className="text-2xl font-bold text-green-600">{nestingResult.usagePercentage.toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Material Waste</p>
+                  <p className="text-2xl font-bold text-orange-600">{nestingResult.wastePercentage.toFixed(1)}%</p>
+                </div>
+              </div>
+            </Card>
+
+            {nestingResult.sheets.map((sheet, idx) => (
+              <Card key={idx} className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Sheet {idx + 1} ({sheet.length} parts)</h3>
+                <InteractiveCanvas
+                  sheet={sheet}
+                  sheetWidth={sheetSize.width}
+                  sheetHeight={sheetSize.height}
+                  kerfWidth={0.5}
+                  showKerf={true}
+                  showGrain={false}
+                  showLabels={true}
+                />
+              </Card>
+            ))}
+
+            <ExportOptions
+              result={nestingResult}
+              sheetWidth={sheetSize.width}
+              sheetHeight={sheetSize.height}
+              kerfWidth={0.5}
+            />
+
+            <div className="flex justify-center">
+              <Button onClick={handleReset} size="lg">
+                Start New Nesting
+              </Button>
+            </div>
+          </div>
         )}
       </main>
     </div>

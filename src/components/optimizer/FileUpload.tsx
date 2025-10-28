@@ -3,17 +3,18 @@ import { useDropzone } from "react-dropzone";
 import { Card } from "@/components/ui/card";
 import { Upload, FileText, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
-import { DXFData } from "@/types/optimizer";
+import { DXFData, DXFPart } from "@/types/optimizer";
 // @ts-ignore - dxf-parser types not available
 import DxfParser from "dxf-parser";
 import { parse3DFile, calculateModelArea, calculateModelBounds } from "@/utils/cadParser";
 
 interface FileUploadProps {
-  onFileProcessed: (data: DXFData) => void;
+  onFilesProcessed: (data: DXFData[]) => void;
 }
 
-const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
+const FileUpload = ({ onFilesProcessed }: FileUploadProps) => {
   const [processing, setProcessing] = useState(false);
+  const [processedFiles, setProcessedFiles] = useState<DXFData[]>([]);
 
   const process3DFile = useCallback(async (file: File) => {
     setProcessing(true);
@@ -46,6 +47,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       const dxfData: DXFData = {
         fileName: file.name,
         entities: [],
+        parts: [], // 3D files don't have 2D parts
         totalArea,
         bounds: {
           minX: bounds.minX,
@@ -72,14 +74,13 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
         toast.success(`3D model processed! Surface area: ${totalArea.toFixed(2)} mm²`);
       }
       
-      onFileProcessed(dxfData);
+      return dxfData;
     } catch (error) {
       console.error("Error processing 3D model:", error);
       toast.error("Failed to process 3D CAD file. Please check the file format and try again.");
-    } finally {
-      setProcessing(false);
+      return null;
     }
-  }, [onFileProcessed]);
+  }, []);
 
   const processDXFFile = useCallback(async (file: File) => {
     setProcessing(true);
@@ -96,6 +97,8 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       const entities = dxf.entities || [];
       let totalArea = 0;
       let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      const extractedParts: DXFPart[] = [];
+      let partCounter = 0;
 
       const processedEntities = entities.map((entity: any) => {
         const processed: any = { type: entity.type };
@@ -108,7 +111,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
           maxY = Math.max(maxY, y);
         };
 
-        // Process different entity types
+        // Process different entity types and extract closed shapes as parts
         if (entity.type === 'CIRCLE') {
           processed.center = { x: entity.center.x, y: entity.center.y };
           processed.radius = entity.radius;
@@ -116,6 +119,25 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
           totalArea += processed.area;
           updateBounds(entity.center.x - entity.radius, entity.center.y - entity.radius);
           updateBounds(entity.center.x + entity.radius, entity.center.y + entity.radius);
+          
+          // Create circle points (approximate as polygon)
+          const circlePoints: { x: number; y: number }[] = [];
+          const segments = 32;
+          for (let i = 0; i < segments; i++) {
+            const angle = (i / segments) * 2 * Math.PI;
+            circlePoints.push({
+              x: entity.center.x + entity.radius * Math.cos(angle),
+              y: entity.center.y + entity.radius * Math.sin(angle),
+            });
+          }
+          
+          extractedParts.push({
+            id: `${file.name.replace(/\.[^/.]+$/, "")}_part${partCounter++}`,
+            points: circlePoints,
+            area: processed.area,
+            fileName: file.name,
+            entityType: 'CIRCLE',
+          });
         } else if (entity.type === 'LWPOLYLINE' || entity.type === 'POLYLINE') {
           processed.points = entity.vertices.map((v: any) => ({ x: v.x, y: v.y }));
           // Simple polygon area calculation (Shoelace formula)
@@ -129,6 +151,17 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
             }
             processed.area = Math.abs(area / 2);
             totalArea += processed.area;
+            
+            // Only add as part if it's a closed shape with area
+            if (processed.area > 0) {
+              extractedParts.push({
+                id: `${file.name.replace(/\.[^/.]+$/, "")}_part${partCounter++}`,
+                points: processed.points,
+                area: processed.area,
+                fileName: file.name,
+                entityType: entity.type,
+              });
+            }
           }
         } else if (entity.type === 'LINE') {
           processed.points = [
@@ -166,6 +199,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       const dxfData: DXFData = {
         fileName: file.name,
         entities: processedEntities,
+        parts: extractedParts,
         totalArea,
         bounds: { minX, maxX, minY, maxY },
         validationIssues: validationIssues.length > 0 ? validationIssues : undefined,
@@ -174,6 +208,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       console.log('=== DXF FILE PROCESSED ===');
       console.log('File Name:', file.name);
       console.log('Entities Found:', processedEntities.length);
+      console.log('Parts Extracted:', extractedParts.length);
       console.log('Total Area Calculated:', totalArea, 'mm²');
       console.log('Bounds:', { minX, maxX, minY, maxY });
       console.log('Validation Issues:', validationIssues);
@@ -182,38 +217,64 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       if (validationIssues.length > 0) {
         toast.error(`File processed with issues - check validation warnings`);
       } else {
-        toast.success(`DXF file processed successfully! Found ${processedEntities.length} entities with ${totalArea.toFixed(2)} mm² total area.`);
+        toast.success(`DXF processed! Found ${extractedParts.length} parts with ${totalArea.toFixed(2)} mm² total area.`);
       }
       
-      onFileProcessed(dxfData);
+      return dxfData;
     } catch (error) {
       console.error("Error processing DXF:", error);
       toast.error("Failed to process DXF file. Please ensure it's a valid 2D DXF file.");
+      return null;
+    }
+  }, []);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+    
+    if (acceptedFiles.length > 10) {
+      toast.error("Maximum 10 files allowed. Please select up to 10 DXF files.");
+      return;
+    }
+
+    setProcessing(true);
+    const allProcessedData: DXFData[] = [];
+    
+    try {
+      for (const file of acceptedFiles) {
+        const fileName = file.name.toLowerCase();
+        
+        let data: DXFData | null = null;
+        
+        if (fileName.endsWith('.dxf')) {
+          data = await processDXFFile(file);
+        } else if (fileName.endsWith('.step') || fileName.endsWith('.stp') || 
+                   fileName.endsWith('.iges') || fileName.endsWith('.igs') ||
+                   fileName.endsWith('.x_t') || fileName.endsWith('.sldprt')) {
+          data = await process3DFile(file);
+        } else if (fileName.endsWith('.dwg')) {
+          toast.error(`${file.name}: DWG format not supported. Please convert to DXF.`);
+        } else if (fileName.endsWith('.pdf')) {
+          toast.error(`${file.name}: PDF format not supported. Please convert to DXF.`);
+        } else {
+          toast.error(`${file.name}: Unsupported file format.`);
+        }
+        
+        if (data) {
+          allProcessedData.push(data);
+        }
+      }
+      
+      if (allProcessedData.length > 0) {
+        const totalParts = allProcessedData.reduce((sum, d) => sum + d.parts.length, 0);
+        toast.success(`Processed ${allProcessedData.length} files with ${totalParts} total parts!`);
+        onFilesProcessed(allProcessedData);
+      } else {
+        toast.error("No valid files were processed.");
+      }
     } finally {
       setProcessing(false);
     }
-  }, [onFileProcessed]);
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
-      const fileName = file.name.toLowerCase();
-      
-      if (fileName.endsWith('.dxf')) {
-        processDXFFile(file);
-      } else if (fileName.endsWith('.step') || fileName.endsWith('.stp') || 
-                 fileName.endsWith('.iges') || fileName.endsWith('.igs') ||
-                 fileName.endsWith('.x_t') || fileName.endsWith('.sldprt')) {
-        process3DFile(file);
-      } else if (fileName.endsWith('.dwg')) {
-        toast.error("DWG format detected. Please convert to DXF format for processing.");
-      } else if (fileName.endsWith('.pdf')) {
-        toast.error("PDF format detected. Please convert to DXF format for processing.");
-      } else {
-        toast.error("Unsupported file format. Please upload DXF or 3D CAD files.");
-      }
-    }
-  }, [processDXFFile, process3DFile]);
+  }, [processDXFFile, process3DFile, onFilesProcessed]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -225,15 +286,16 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
       'application/pdf': ['.pdf'],
       'application/octet-stream': ['.sldprt', '.x_t']
     },
-    multiple: false
+    multiple: true,
+    maxFiles: 10
   });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="text-center space-y-2">
-        <h2 className="text-3xl font-bold">Upload CAD File</h2>
+        <h2 className="text-3xl font-bold">Upload DXF Files</h2>
         <p className="text-muted-foreground">
-          Upload your CAD file to begin optimization
+          Upload up to 10 DXF files for combined nesting optimization
         </p>
       </div>
 
@@ -250,7 +312,8 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
           {processing ? (
             <>
               <div className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-              <p className="text-lg font-medium">Processing DXF file...</p>
+              <p className="text-lg font-medium">Processing files...</p>
+              <p className="text-sm text-muted-foreground">Extracting all closed shapes</p>
             </>
           ) : (
             <>
@@ -259,10 +322,10 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
               </div>
               <div>
                 <p className="text-lg font-medium mb-1">
-                  {isDragActive ? 'Drop CAD file here' : 'Drag & drop CAD file'}
+                  {isDragActive ? 'Drop DXF files here' : 'Drag & drop DXF files'}
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  or click to browse
+                  or click to browse (up to 10 files)
                 </p>
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
