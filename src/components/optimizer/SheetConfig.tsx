@@ -13,12 +13,12 @@ interface SheetConfigProps {
 }
 
 const STANDARD_SHEETS: SheetSize[] = [
-  { name: "4' x 8' (1220 x 2440 mm)", width: 1220, height: 2440 },
-  { name: "4' x 10' (1220 x 3050 mm)", width: 1220, height: 3050 },
-  { name: "5' x 10' (1525 x 3050 mm)", width: 1525, height: 3050 },
-  { name: "4' x 12' (1220 x 3660 mm)", width: 1220, height: 3660 },
-  { name: "5' x 12' (1525 x 3660 mm)", width: 1525, height: 3660 },
-  { name: "6' x 12' (1830 x 3660 mm)", width: 1830, height: 3660 },
+  { name: "4' × 8' (Most Common)", width: 1219, height: 2438 },
+  { name: "5' × 10' (Large Format)", width: 1524, height: 3048 },
+  { name: "4' × 10' (1220 × 3050 mm)", width: 1220, height: 3050 },
+  { name: "4' × 12' (1220 × 3660 mm)", width: 1220, height: 3660 },
+  { name: "5' × 12' (1525 × 3660 mm)", width: 1525, height: 3660 },
+  { name: "6' × 12' (1830 × 3660 mm)", width: 1830, height: 3660 },
 ];
 
 const MATERIALS: MaterialType[] = [
@@ -171,15 +171,15 @@ const SheetConfig = ({ onConfigured }: SheetConfigProps) => {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="cost">Cost per Sheet ($)</Label>
+            <Label htmlFor="cost">Cost per Sheet (₹)</Label>
             <Input
               id="cost"
               type="number"
-              placeholder="Optional"
+              placeholder="e.g., 2500"
               value={costPerSheet}
               onChange={(e) => setCostPerSheet(e.target.value)}
               min="0"
-              step="0.01"
+              step="1"
             />
           </div>
         </div>
@@ -197,13 +197,18 @@ const SheetConfig = ({ onConfigured }: SheetConfigProps) => {
               <Button
                 key={index}
                 variant={selectedStandard === sheet ? "default" : "outline"}
-                className="justify-start text-left h-auto py-3"
+                className="justify-start text-left h-auto py-4 transition-all hover:scale-[1.02]"
                 onClick={() => handleStandardSelect(sheet)}
               >
-                <div>
-                  <div className="font-semibold">{sheet.name}</div>
-                  <div className="text-sm opacity-80">
-                    {sheet.width} mm × {sheet.height} mm
+                <div className="w-full">
+                  <div className="font-semibold flex items-center justify-between">
+                    {sheet.name}
+                    {index < 2 && (
+                      <span className="text-xs bg-primary/20 px-2 py-1 rounded">Popular</span>
+                    )}
+                  </div>
+                  <div className="text-sm opacity-80 mt-1">
+                    {sheet.width} mm × {sheet.height} mm • {((sheet.width * sheet.height) / 1000000).toFixed(2)} m²
                   </div>
                 </div>
               </Button>

@@ -9,8 +9,11 @@ import ValidationWarnings from "@/components/optimizer/ValidationWarnings";
 import { DXFData, SheetSize, CalculationResults, DXFPart } from "@/types/optimizer";
 import InteractiveCanvas from "@/components/nesting/InteractiveCanvas";
 import ExportOptions from "@/components/nesting/ExportOptions";
+import AdvancedConfig from "@/components/nesting/AdvancedConfig";
+import CostCalculator from "@/components/nesting/CostCalculator";
 import { nestParts, NestingPart, NestingResult } from "@/utils/nestingAlgorithm";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Optimizer = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -18,6 +21,13 @@ const Optimizer = () => {
   const [allParts, setAllParts] = useState<DXFPart[]>([]);
   const [sheetSize, setSheetSize] = useState<SheetSize | null>(null);
   const [nestingResult, setNestingResult] = useState<NestingResult | null>(null);
+  const [nestingConfig, setNestingConfig] = useState({
+    kerfWidth: 0.5,
+    globalClearance: 2,
+    rotationStep: 15,
+    commonLineCutting: false,
+    maxIterations: 1000,
+  });
 
   const handleFilesProcessed = (data: DXFData[]) => {
     setDxfFiles(data);
@@ -49,17 +59,11 @@ const Optimizer = () => {
       rotationLimit: 360, // Allow free rotation for optimal nesting
     }));
 
-    // Perform nesting
+    // Perform nesting with user-configured settings
     const result = nestParts(nestingParts, {
       width: sheet.width,
       height: sheet.height,
-    }, {
-      kerfWidth: 0.5, // Default kerf width in mm
-      globalClearance: 2, // 2mm clearance between parts
-      rotationStep: 15, // Test rotations every 15 degrees
-      commonLineCutting: false,
-      maxIterations: 1000,
-    });
+    }, nestingConfig);
 
     console.log('=== NESTING RESULTS ===');
     console.log('Total Files:', dxfFiles.length);
@@ -140,62 +144,110 @@ const Optimizer = () => {
                 ))}
               </ul>
             </Card>
-            <div className="grid lg:grid-cols-2 gap-8">
-              <DXFViewer data={dxfFiles[0]} />
-              <SheetConfig onConfigured={handleSheetConfigured} />
-            </div>
+            
+            <Tabs defaultValue="sheet" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="sheet">Sheet Configuration</TabsTrigger>
+                <TabsTrigger value="advanced">Advanced Settings</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="sheet" className="mt-6">
+                <div className="grid lg:grid-cols-2 gap-8">
+                  <DXFViewer data={dxfFiles[0]} />
+                  <SheetConfig onConfigured={handleSheetConfigured} />
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="advanced" className="mt-6">
+                <div className="max-w-2xl mx-auto">
+                  <AdvancedConfig config={nestingConfig} onChange={setNestingConfig} />
+                </div>
+              </TabsContent>
+            </Tabs>
           </div>
         )}
         
         {step === 3 && nestingResult && sheetSize && (
           <div className="space-y-6">
-            <Card className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Nesting Results</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Sheets Required</p>
-                  <p className="text-2xl font-bold">{nestingResult.sheetsRequired}</p>
+            {/* Summary Header */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <h2 className="text-2xl font-bold mb-4">Nesting Results</h2>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sheets Required</p>
+                    <p className="text-3xl font-bold text-primary">{nestingResult.sheetsRequired}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Parts Placed</p>
+                    <p className="text-3xl font-bold">{nestingResult.totalPartsPlaced}/{allParts.length}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Material Usage</p>
+                    <p className="text-3xl font-bold text-green-600">{nestingResult.usagePercentage.toFixed(1)}%</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Material Waste</p>
+                    <p className="text-3xl font-bold text-orange-600">{nestingResult.wastePercentage.toFixed(1)}%</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Parts Placed</p>
-                  <p className="text-2xl font-bold">{nestingResult.totalPartsPlaced}/{allParts.length}</p>
+                <div className="mt-4 pt-4 border-t border-primary/20">
+                  <p className="text-sm">
+                    <strong>Sheet Size:</strong> {sheetSize.name || `${sheetSize.width} × ${sheetSize.height} mm`}
+                  </p>
+                  {sheetSize.material && (
+                    <p className="text-sm mt-1">
+                      <strong>Material:</strong> {sheetSize.material} {sheetSize.thickness && `(${sheetSize.thickness}mm)`}
+                    </p>
+                  )}
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Material Usage</p>
-                  <p className="text-2xl font-bold text-green-600">{nestingResult.usagePercentage.toFixed(1)}%</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Material Waste</p>
-                  <p className="text-2xl font-bold text-orange-600">{nestingResult.wastePercentage.toFixed(1)}%</p>
-                </div>
-              </div>
-            </Card>
-
-            {nestingResult.sheets.map((sheet, idx) => (
-              <Card key={idx} className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Sheet {idx + 1} ({sheet.length} parts)</h3>
-                <InteractiveCanvas
-                  sheet={sheet}
-                  sheetWidth={sheetSize.width}
-                  sheetHeight={sheetSize.height}
-                  kerfWidth={0.5}
-                  showKerf={true}
-                  showGrain={false}
-                  showLabels={true}
-                />
               </Card>
-            ))}
+
+              <CostCalculator 
+                result={nestingResult} 
+                sheetWidth={sheetSize.width} 
+                sheetHeight={sheetSize.height} 
+              />
+            </div>
+
+            {/* Sheet Visualizations */}
+            <div className="space-y-6">
+              {nestingResult.sheets.map((sheet, idx) => (
+                <Card key={idx} className="p-6 bg-card/50">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold">
+                      Sheet {idx + 1} of {nestingResult.sheetsRequired}
+                    </h3>
+                    <div className="text-sm text-muted-foreground">
+                      {sheet.length} parts • {((sheet.reduce((sum, p) => sum + p.area, 0) / (sheetSize.width * sheetSize.height)) * 100).toFixed(1)}% utilized
+                    </div>
+                  </div>
+                  <InteractiveCanvas
+                    sheet={sheet}
+                    sheetWidth={sheetSize.width}
+                    sheetHeight={sheetSize.height}
+                    kerfWidth={nestingConfig.kerfWidth}
+                    showKerf={true}
+                    showGrain={false}
+                    showLabels={true}
+                  />
+                </Card>
+              ))}
+            </div>
 
             <ExportOptions
               result={nestingResult}
               sheetWidth={sheetSize.width}
               sheetHeight={sheetSize.height}
-              kerfWidth={0.5}
+              kerfWidth={nestingConfig.kerfWidth}
             />
 
-            <div className="flex justify-center">
-              <Button onClick={handleReset} size="lg">
+            <div className="flex justify-center gap-4">
+              <Button onClick={handleReset} size="lg" variant="outline">
                 Start New Nesting
+              </Button>
+              <Button onClick={() => setStep(2)} size="lg" variant="secondary">
+                Adjust Settings
               </Button>
             </div>
           </div>
