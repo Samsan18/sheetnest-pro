@@ -1,26 +1,9 @@
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Upload, Activity, BarChart3, Download, FolderOpen, LogIn } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { Upload, Activity, BarChart3, Download } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroImage from "@/assets/hero-manufacturing.jpg";
 
 const Index = () => {
-  const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -57,24 +40,16 @@ const Index = () => {
                 your fabrication productivity with advanced nesting algorithms.
               </p>
               <div className="flex gap-4">
-                {isAuthenticated ? (
-                  <Link to="/projects">
-                    <Button size="lg" className="gap-2">
-                      My Projects <FolderOpen className="h-5 w-5" />
-                    </Button>
-                  </Link>
-                ) : (
-                  <Link to="/auth">
-                    <Button size="lg" className="gap-2">
-                      Get Started <LogIn className="h-5 w-5" />
-                    </Button>
-                  </Link>
-                )}
                 <Link to="/optimizer">
-                  <Button size="lg" variant="outline" className="gap-2">
-                    Try Demo <Upload className="h-5 w-5" />
+                  <Button size="lg" className="gap-2">
+                    <Upload className="h-5 w-5" />
+                    Start Optimizing
                   </Button>
                 </Link>
+                <Button size="lg" variant="outline" className="gap-2">
+                  <Download className="h-5 w-5" />
+                  View Demo
+                </Button>
               </div>
               <div className="flex gap-8 pt-4">
                 <div>
