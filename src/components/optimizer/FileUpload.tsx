@@ -112,7 +112,8 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/dxf': ['.dxf'] },
-    multiple: false
+    multiple: true,
+    maxFiles: 5
   });
 
   return (
@@ -154,7 +155,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-4 w-4" />
-                <span>Supports .dxf format</span>
+                <span>Supports .dxf format (1-5 files)</span>
               </div>
             </>
           )}

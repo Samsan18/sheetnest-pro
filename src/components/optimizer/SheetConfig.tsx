@@ -14,11 +14,7 @@ interface SheetConfigProps {
 
 const STANDARD_SHEETS: SheetSize[] = [
   { name: "4' x 8' (1220 x 2440 mm)", width: 1220, height: 2440 },
-  { name: "4' x 10' (1220 x 3050 mm)", width: 1220, height: 3050 },
   { name: "5' x 10' (1525 x 3050 mm)", width: 1525, height: 3050 },
-  { name: "4' x 12' (1220 x 3660 mm)", width: 1220, height: 3660 },
-  { name: "5' x 12' (1525 x 3660 mm)", width: 1525, height: 3660 },
-  { name: "6' x 12' (1830 x 3660 mm)", width: 1830, height: 3660 },
 ];
 
 const MATERIALS: MaterialType[] = [
