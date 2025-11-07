@@ -6,70 +6,65 @@ import FileUpload from "@/components/optimizer/FileUpload";
 import DXFViewer from "@/components/optimizer/DXFViewer";
 import SheetConfig from "@/components/optimizer/SheetConfig";
 import ResultsDisplay from "@/components/optimizer/ResultsDisplay";
+import NestingPreview from "@/components/optimizer/NestingPreview";
 import { DXFData, SheetSize, CalculationResults } from "@/types/optimizer";
+import { nestParts } from "@/lib/nestingAlgorithm";
 
 const Optimizer = () => {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [dxfData, setDxfData] = useState<DXFData | null>(null);
+  const [dxfFiles, setDxfFiles] = useState<DXFData[]>([]);
   const [sheetSize, setSheetSize] = useState<SheetSize | null>(null);
   const [results, setResults] = useState<CalculationResults | null>(null);
+  const [currentSheetView, setCurrentSheetView] = useState(0);
 
-  const handleFileProcessed = (data: DXFData) => {
-    setDxfData(data);
+  const handleFilesProcessed = (data: DXFData[]) => {
+    setDxfFiles(data);
     setStep(2);
   };
 
   const handleSheetConfigured = (sheet: SheetSize) => {
     setSheetSize(sheet);
-    if (dxfData) {
-      calculateResults(dxfData, sheet);
+    if (dxfFiles.length > 0) {
+      calculateResults(dxfFiles, sheet);
     }
     setStep(3);
   };
 
-  const calculateResults = (dxf: DXFData, sheet: SheetSize) => {
+  const calculateResults = (files: DXFData[], sheet: SheetSize) => {
     const sheetArea = sheet.width * sheet.height;
-    const quantity = sheet.quantity || 1;
     
-    // Single part area from DXF
-    const singlePartArea = dxf.totalArea;
+    // Perform nesting
+    const nestedSheets = nestParts(files, sheet.width, sheet.height, {
+      spacing: 5,
+      rotationSteps: [0, 90, 180, 270],
+      maxIterations: 100
+    });
     
-    // Total area needed for all parts
-    const totalPartArea = singlePartArea * quantity;
+    const sheetsRequired = nestedSheets.length;
+    const totalParts = files.length;
     
-    // Calculate how many sheets are required
-    const sheetsRequired = Math.ceil(totalPartArea / sheetArea);
+    // Calculate total part area
+    const totalPartArea = files.reduce((sum, file) => sum + file.totalArea, 0);
     
-    // Total available area from all sheets
+    // Total available area
     const totalAvailableArea = sheetsRequired * sheetArea;
     
-    // Calculate waste area (total available - total used)
+    // Calculate waste
     const wasteArea = totalAvailableArea - totalPartArea;
-    
-    // Calculate percentages based on total available area
     const usagePercentage = (totalPartArea / totalAvailableArea) * 100;
     const wastePercentage = (wasteArea / totalAvailableArea) * 100;
     
     const totalCost = sheet.costPerSheet ? sheet.costPerSheet * sheetsRequired : undefined;
-    const costPerPart = totalCost ? totalCost / quantity : undefined;
+    const costPerPart = totalCost && totalParts > 0 ? totalCost / totalParts : undefined;
 
-    console.log('=== REAL CALCULATION DATA ===');
-    console.log('DXF File:', dxf.fileName);
-    console.log('Single Part Area (from DXF):', singlePartArea, 'mm²');
-    console.log('Quantity Requested:', quantity, 'pieces');
-    console.log('Total Part Area Needed:', totalPartArea, 'mm²');
+    console.log('=== NESTING RESULTS ===');
+    console.log('Total DXF Files:', totalParts);
+    console.log('Total Part Area:', totalPartArea.toFixed(2), 'mm²');
     console.log('Sheet Size:', sheet.width, 'x', sheet.height, 'mm');
-    console.log('Single Sheet Area:', sheetArea, 'mm²');
     console.log('Sheets Required:', sheetsRequired);
-    console.log('Total Available Area:', totalAvailableArea, 'mm²');
-    console.log('Waste Area:', wasteArea, 'mm²');
     console.log('Material Usage:', usagePercentage.toFixed(2), '%');
     console.log('Material Waste:', wastePercentage.toFixed(2), '%');
-    if (totalCost) {
-      console.log('Total Cost:', totalCost);
-      console.log('Cost per Part:', costPerPart);
-    }
-    console.log('============================');
+    console.log('======================');
 
     setResults({
       sheetArea,
@@ -80,14 +75,17 @@ const Optimizer = () => {
       wasteArea,
       totalCost,
       costPerPart,
+      nestedParts: nestedSheets,
+      totalParts
     });
   };
 
   const handleReset = () => {
     setStep(1);
-    setDxfData(null);
+    setDxfFiles([]);
     setSheetSize(null);
     setResults(null);
+    setCurrentSheetView(0);
   };
 
   return (
@@ -125,22 +123,49 @@ const Optimizer = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        {step === 1 && <FileUpload onFileProcessed={handleFileProcessed} />}
+        {step === 1 && <FileUpload onFilesProcessed={handleFilesProcessed} />}
         
-        {step === 2 && dxfData && (
-          <div className="grid lg:grid-cols-2 gap-8">
-            <DXFViewer data={dxfData} />
-            <SheetConfig onConfigured={handleSheetConfigured} />
+        {step === 2 && dxfFiles.length > 0 && (
+          <div className="space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-bold mb-2">Configure Sheet Size</h2>
+              <p className="text-muted-foreground">
+                {dxfFiles.length} DXF file(s) loaded - Select material and sheet size
+              </p>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-8">
+              {dxfFiles[0] && <DXFViewer data={dxfFiles[0]} />}
+              <SheetConfig onConfigured={handleSheetConfigured} />
+            </div>
           </div>
         )}
         
-        {step === 3 && results && dxfData && sheetSize && (
-          <ResultsDisplay 
-            results={results} 
-            dxfData={dxfData} 
-            sheetSize={sheetSize}
-            onReset={handleReset}
-          />
+        {step === 3 && results && sheetSize && (
+          <div className="space-y-6">
+            <ResultsDisplay 
+              results={results} 
+              dxfData={dxfFiles[0]} 
+              sheetSize={sheetSize}
+              onReset={handleReset}
+            />
+            <NestingPreview
+              sheets={results.nestedParts}
+              sheetWidth={sheetSize.width}
+              sheetHeight={sheetSize.height}
+              currentSheet={currentSheetView}
+            />
+            <div className="flex justify-center gap-2">
+              {results.nestedParts.map((_, index) => (
+                <Button
+                  key={index}
+                  variant={currentSheetView === index ? "default" : "outline"}
+                  onClick={() => setCurrentSheetView(index)}
+                >
+                  Sheet {index + 1}
+                </Button>
+              ))}
+            </div>
+          </div>
         )}
       </main>
     </div>

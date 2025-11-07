@@ -8,13 +8,14 @@ import { DXFData } from "@/types/optimizer";
 import DxfParser from "dxf-parser";
 
 interface FileUploadProps {
-  onFileProcessed: (data: DXFData) => void;
+  onFilesProcessed: (data: DXFData[]) => void;
 }
 
-const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
+const FileUpload = ({ onFilesProcessed }: FileUploadProps) => {
   const [processing, setProcessing] = useState(false);
+  const [processedFiles, setProcessedFiles] = useState<DXFData[]>([]);
 
-  const processDXFFile = useCallback(async (file: File) => {
+  const processDXFFile = useCallback(async (file: File): Promise<DXFData | null> => {
     setProcessing(true);
     try {
       const text = await file.text();
@@ -74,46 +75,62 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
         return processed;
       });
 
+      const width = maxX - minX;
+      const height = maxY - minY;
+
       const dxfData: DXFData = {
         fileName: file.name,
         entities: processedEntities,
         totalArea,
-        bounds: { minX, maxX, minY, maxY }
+        bounds: { minX, maxX, minY, maxY },
+        width,
+        height
       };
 
       console.log('=== DXF FILE PROCESSED ===');
       console.log('File Name:', file.name);
+      console.log('Dimensions:', width, 'x', height, 'mm');
       console.log('Entities Found:', processedEntities.length);
       console.log('Total Area Calculated:', totalArea, 'mm²');
-      console.log('Bounds:', { minX, maxX, minY, maxY });
       console.log('=========================');
 
-      toast.success(`DXF file processed successfully! Found ${processedEntities.length} entities with ${totalArea.toFixed(2)} mm² total area.`);
-      onFileProcessed(dxfData);
+      return dxfData;
     } catch (error) {
       console.error("Error processing DXF:", error);
-      toast.error("Failed to process DXF file. Please ensure it's a valid 2D DXF file.");
-    } finally {
-      setProcessing(false);
+      toast.error(`Failed to process ${file.name}`);
+      return null;
     }
-  }, [onFileProcessed]);
+  }, []);
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles.length > 0) {
-      const file = acceptedFiles[0];
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    if (acceptedFiles.length === 0) return;
+    
+    setProcessing(true);
+    const results: DXFData[] = [];
+    
+    for (const file of acceptedFiles) {
       if (file.name.toLowerCase().endsWith('.dxf')) {
-        processDXFFile(file);
+        const result = await processDXFFile(file);
+        if (result) results.push(result);
       } else {
-        toast.error("Please upload a .dxf file");
+        toast.error(`${file.name} is not a .dxf file`);
       }
     }
-  }, [processDXFFile]);
+    
+    setProcessing(false);
+    
+    if (results.length > 0) {
+      setProcessedFiles(results);
+      toast.success(`Successfully processed ${results.length} DXF file(s)`);
+      onFilesProcessed(results);
+    }
+  }, [processDXFFile, onFilesProcessed]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: { 'application/dxf': ['.dxf'] },
     multiple: true,
-    maxFiles: 5
+    maxFiles: 10
   });
 
   return (
@@ -155,7 +172,7 @@ const FileUpload = ({ onFileProcessed }: FileUploadProps) => {
               </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <FileText className="h-4 w-4" />
-                <span>Supports .dxf format (1-5 files)</span>
+                <span>Supports .dxf format (up to 10 files)</span>
               </div>
             </>
           )}

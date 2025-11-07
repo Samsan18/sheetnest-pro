@@ -8,6 +8,16 @@ export interface DXFData {
     minY: number;
     maxY: number;
   };
+  width: number;
+  height: number;
+}
+
+export interface NestedPart {
+  dxfData: DXFData;
+  x: number;
+  y: number;
+  rotation: number;
+  fileIndex: number;
 }
 
 export interface DXFEntity {
@@ -52,4 +62,6 @@ export interface CalculationResults {
   totalCost?: number;
   costPerPart?: number;
   wasteArea: number;
+  nestedParts: NestedPart[][];
+  totalParts: number;
 }
