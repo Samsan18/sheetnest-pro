@@ -1,9 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, RefreshCw, CheckCircle2, AlertTriangle } from "lucide-react";
+import { Download, RefreshCw, CheckCircle2, AlertTriangle, FileSpreadsheet, FileCode } from "lucide-react";
 import { CalculationResults, DXFData, SheetSize } from "@/types/optimizer";
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { exportNestedLayoutAsDXF } from "@/lib/dxfExporter";
 
 interface ResultsDisplayProps {
   results: CalculationResults;
@@ -30,11 +32,11 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
       
       // Title
       doc.setFontSize(20);
-      doc.text("SheetNest Optimizer - Results Report", 20, 20);
+      doc.text("Metal Sheet Analyzer - Results Report", 20, 20);
       
       // File info
       doc.setFontSize(12);
-      doc.text(`DXF File: ${dxfData.fileName}`, 20, 35);
+      doc.text(`Total Parts: ${results.totalParts}`, 20, 35);
       doc.text(`Material: ${sheetSize.material || 'Not specified'}`, 20, 42);
       doc.text(`Sheet Size: ${sheetSize.name || `${sheetSize.width} x ${sheetSize.height} mm`}`, 20, 49);
       if (sheetSize.thickness) {
@@ -60,19 +62,98 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
         doc.text(`Cost per Part: $${results.costPerPart?.toFixed(2)}`, 20, 150);
       }
       
-      // Entity details
-      doc.setFontSize(16);
-      doc.text("Part Details", 20, 166);
-      
-      doc.setFontSize(12);
-      doc.text(`Total Entities: ${dxfData.entities.length}`, 20, 181);
-      
       // Save
-      doc.save(`sheetnest-report-${Date.now()}.pdf`);
+      doc.save(`metal-sheet-analysis-${Date.now()}.pdf`);
       toast.success("PDF report generated successfully!");
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Failed to generate PDF report");
+    }
+  };
+
+  const handleExportExcel = () => {
+    try {
+      // Create workbook
+      const wb = XLSX.utils.book_new();
+      
+      // Summary sheet
+      const summaryData = [
+        ["Metal Sheet Analyzer - Analysis Report"],
+        [""],
+        ["Project Information"],
+        ["Total Parts", results.totalParts],
+        ["Material", sheetSize.material || "Not specified"],
+        ["Sheet Size", sheetSize.name || `${sheetSize.width} x ${sheetSize.height} mm`],
+        ["Thickness", sheetSize.thickness ? `${sheetSize.thickness} ${sheetSize.unit || 'mm'}` : "Not specified"],
+        ["Quantity", sheetSize.quantity || 1],
+        ["Date", new Date().toLocaleDateString()],
+        [""],
+        ["Analysis Results"],
+        ["Sheet Area (mm²)", results.sheetArea],
+        ["Total Part Area (mm²)", results.totalPartArea],
+        ["Material Usage (%)", results.usagePercentage.toFixed(2)],
+        ["Material Waste (%)", results.wastePercentage.toFixed(2)],
+        ["Waste Area (mm²)", results.wasteArea],
+        ["Sheets Required", results.sheetsRequired],
+      ];
+      
+      if (results.totalCost) {
+        summaryData.push(["Total Cost ($)", results.totalCost.toFixed(2)]);
+        summaryData.push(["Cost per Part ($)", results.costPerPart?.toFixed(2)]);
+      }
+      
+      const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+      XLSX.utils.book_append_sheet(wb, wsSummary, "Summary");
+      
+      // Nesting details sheet
+      const nestingData: any[][] = [["Sheet No.", "Part No.", "File Index", "X Position", "Y Position", "Rotation", "Width", "Height"]];
+      
+      results.nestedParts.forEach((sheet, sheetIdx) => {
+        sheet.forEach((part, partIdx) => {
+          const partWidth = part.rotation === 90 || part.rotation === 270 
+            ? part.dxfData.height 
+            : part.dxfData.width;
+          const partHeight = part.rotation === 90 || part.rotation === 270 
+            ? part.dxfData.width 
+            : part.dxfData.height;
+          
+          nestingData.push([
+            sheetIdx + 1,
+            partIdx + 1,
+            part.fileIndex + 1,
+            part.x.toFixed(2),
+            part.y.toFixed(2),
+            part.rotation,
+            partWidth.toFixed(2),
+            partHeight.toFixed(2)
+          ]);
+        });
+      });
+      
+      const wsNesting = XLSX.utils.aoa_to_sheet(nestingData);
+      XLSX.utils.book_append_sheet(wb, wsNesting, "Nesting Layout");
+      
+      // Save file
+      XLSX.writeFile(wb, `metal-sheet-analysis-${Date.now()}.xlsx`);
+      toast.success("Excel report generated successfully!");
+    } catch (error) {
+      console.error("Error generating Excel:", error);
+      toast.error("Failed to generate Excel report");
+    }
+  };
+
+  const handleExportDXF = () => {
+    try {
+      exportNestedLayoutAsDXF(
+        results.nestedParts,
+        sheetSize.width,
+        sheetSize.height,
+        "nested_layout"
+      );
+      toast.success("DXF file exported successfully!");
+    } catch (error) {
+      console.error("Error exporting DXF:", error);
+      toast.error("Failed to export DXF file");
     }
   };
 
@@ -90,7 +171,15 @@ const ResultsDisplay = ({ results, dxfData, sheetSize, onReset }: ResultsDisplay
           </Button>
           <Button onClick={handleExportPDF} className="gap-2">
             <Download className="h-4 w-4" />
-            Export PDF
+            PDF
+          </Button>
+          <Button onClick={handleExportExcel} variant="outline" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Excel
+          </Button>
+          <Button onClick={handleExportDXF} variant="outline" className="gap-2">
+            <FileCode className="h-4 w-4" />
+            DXF
           </Button>
         </div>
       </div>

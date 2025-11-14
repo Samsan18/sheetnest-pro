@@ -12,7 +12,7 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <Activity className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              SheetNest Optimizer
+              Metal Sheet Analyzer
             </h1>
           </div>
           <nav className="flex gap-4">
@@ -29,15 +29,16 @@ const Index = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-6">
               <div className="inline-block px-4 py-2 bg-primary/10 border border-primary/20 rounded-full">
-                <span className="text-primary font-semibold">Professional CAD Optimization</span>
+                <span className="text-primary font-semibold">Production-Ready CAD Analysis</span>
               </div>
               <h2 className="text-5xl font-bold leading-tight">
-                Optimize Sheet Metal
-                <span className="block text-primary">Material Usage</span>
+                Analyze & Optimize
+                <span className="block text-primary">Metal Sheet Utilization</span>
               </h2>
               <p className="text-xl text-muted-foreground">
-                Upload DXF files, calculate material efficiency, minimize waste, and maximize 
-                your fabrication productivity with advanced nesting algorithms.
+                Professional DXF file processing for fabrication shops. Upload multiple CAD files, 
+                analyze material efficiency, optimize nesting layouts, and export production-ready 
+                cutting plans with detailed reports.
               </p>
               <div className="flex gap-4">
                 <Link to="/optimizer">
@@ -138,7 +139,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border mt-20">
         <div className="container mx-auto px-4 py-8 text-center text-muted-foreground">
-          <p>© 2025 SheetNest Optimizer. Professional CAD Material Optimization.</p>
+          <p>© 2025 Metal Sheet Analyzer. Professional Metal Fabrication Analysis & Optimization.</p>
         </div>
       </footer>
     </div>
