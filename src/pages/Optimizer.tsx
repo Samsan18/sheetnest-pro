@@ -32,43 +32,59 @@ const Optimizer = () => {
 
   const calculateResults = (files: DXFData[], sheet: SheetSize) => {
     const sheetArea = sheet.width * sheet.height;
+    const quantity = sheet.quantity || 1;
     
-    // Perform nesting
-    const nestedSheets = nestParts(files, sheet.width, sheet.height, {
+    // Replicate parts based on quantity needed
+    const replicatedParts: DXFData[] = [];
+    for (let i = 0; i < quantity; i++) {
+      replicatedParts.push(...files);
+    }
+    
+    // Perform nesting with all replicated parts
+    const nestedSheets = nestParts(replicatedParts, sheet.width, sheet.height, {
       spacing: 5,
       rotationSteps: [0, 90, 180, 270],
       maxIterations: 100
     });
     
     const sheetsRequired = nestedSheets.length;
-    const totalParts = files.length;
+    const totalPartsNeeded = replicatedParts.length;
     
-    // Calculate total part area
-    const totalPartArea = files.reduce((sum, file) => sum + file.totalArea, 0);
+    // Calculate actual nested part area (sum of all parts actually placed)
+    let totalNestedPartArea = 0;
+    nestedSheets.forEach(sheet => {
+      sheet.forEach(part => {
+        totalNestedPartArea += part.dxfData.totalArea;
+      });
+    });
     
-    // Total available area
+    // Total available area (actual sheets used)
     const totalAvailableArea = sheetsRequired * sheetArea;
     
-    // Calculate waste
-    const wasteArea = totalAvailableArea - totalPartArea;
-    const usagePercentage = (totalPartArea / totalAvailableArea) * 100;
+    // Calculate actual waste based on nested parts
+    const wasteArea = totalAvailableArea - totalNestedPartArea;
+    const usagePercentage = (totalNestedPartArea / totalAvailableArea) * 100;
     const wastePercentage = (wasteArea / totalAvailableArea) * 100;
     
     const totalCost = sheet.costPerSheet ? sheet.costPerSheet * sheetsRequired : undefined;
-    const costPerPart = totalCost && totalParts > 0 ? totalCost / totalParts : undefined;
+    const costPerPart = totalCost && quantity > 0 ? totalCost / quantity : undefined;
 
-    console.log('=== NESTING RESULTS ===');
-    console.log('Total DXF Files:', totalParts);
-    console.log('Total Part Area:', totalPartArea.toFixed(2), 'mm²');
+    console.log('=== ACCURATE NESTING RESULTS ===');
+    console.log('Parts Requested:', quantity, 'pieces');
+    console.log('Total Parts to Nest:', totalPartsNeeded);
+    console.log('Total Nested Part Area:', totalNestedPartArea.toFixed(2), 'mm²');
     console.log('Sheet Size:', sheet.width, 'x', sheet.height, 'mm');
+    console.log('Sheet Area:', sheetArea.toFixed(2), 'mm²');
     console.log('Sheets Required:', sheetsRequired);
+    console.log('Total Sheet Area:', totalAvailableArea.toFixed(2), 'mm²');
     console.log('Material Usage:', usagePercentage.toFixed(2), '%');
     console.log('Material Waste:', wastePercentage.toFixed(2), '%');
-    console.log('======================');
+    console.log('Waste Area:', wasteArea.toFixed(2), 'mm²');
+    console.log('================================');
 
     setResults({
       sheetArea,
-      totalPartArea,
+      totalPartArea: totalNestedPartArea,
       usagePercentage,
       wastePercentage,
       sheetsRequired,
@@ -76,7 +92,7 @@ const Optimizer = () => {
       totalCost,
       costPerPart,
       nestedParts: nestedSheets,
-      totalParts
+      totalParts: totalPartsNeeded
     });
   };
 
